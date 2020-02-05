@@ -1,0 +1,6 @@
+domain_exporter_user: domain_exp
+domain_exporter_version: 0.1.8
+domain_exporter_bind: ":9203"
+domain_exporter_cli_flags: {}
+domain_exporter_domains:
+  - google.com

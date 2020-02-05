@@ -1,0 +1,5 @@
+- name: restart domain exporter
+  systemd:
+    daemon_reload: true
+    name: domain-exporter
+    state: restarted

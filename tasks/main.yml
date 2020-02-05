@@ -1,0 +1,67 @@
+- name: create domain_exporter system group
+  group:
+    name: "{{ domain_exporter_user }}"
+    system: true
+    state: present
+
+- name: create domain_exporter system user
+  user:
+    name: "{{ domain_exporter_user }}"
+    system: true
+    shell: "/usr/sbin/nologin"
+    group: "{{ domain_exporter_user }}"
+    createhome: false
+
+- name: "Download domain_exporter files"
+  become: false
+  get_url:
+    url: "https://github.com/shift/domain_exporter/releases/download/v{{domain_exporter_version}}/domain_exporter_{{domain_exporter_version}}_linux_amd64_go1.11.4.tar.gz"
+    dest: "/tmp/"
+  delegate_to: localhost
+
+- name: "Create temporary directory"
+  become: false
+  file:
+    path: /tmp/domain_exporter_{{domain_exporter_version}}_linux_amd64_go1.11.4
+    state: directory
+  delegate_to: localhost
+
+- name: "Unarchive domain_exporter files"
+  become: false
+  unarchive:
+    src: "/tmp/domain_exporter_{{domain_exporter_version}}_linux_amd64_go1.11.4.tar.gz"
+    remote_src: yes
+    dest: "/tmp/domain_exporter_{{domain_exporter_version}}_linux_amd64_go1.11.4/"
+    creates: "/tmp/domain_exporter_{{domain_exporter_version}}_linux_amd64_go1.11.4/domain_exporter"
+  delegate_to: localhost
+  check_mode: false
+
+- name: propagate domain_exporter binary
+  copy:
+    src: "/tmp/domain_exporter_{{domain_exporter_version}}_linux_amd64_go1.11.4/domain_exporter"
+    dest: "/usr/local/bin/domain_exporter"
+    mode: 0755
+    owner: "{{ domain_exporter_user }}"
+    group: "{{ domain_exporter_user }}"
+  notify:
+    - restart domain exporter
+
+- name: create systemd service unit
+  template:
+    src: domain-exporter.service.j2
+    dest: /etc/systemd/system/domain-exporter.service
+    owner: root
+    group: root
+    mode: 0644
+  notify:
+    - restart domain exporter
+
+- name: configure domain exporter
+  template:
+    src: domains.yml.j2
+    dest: /etc/domain_exporter.yml
+    owner: "{{ domain_exporter_user }}"
+    group: "{{ domain_exporter_user }}"
+    mode: 0644
+  notify:
+    - restart domain exporter
